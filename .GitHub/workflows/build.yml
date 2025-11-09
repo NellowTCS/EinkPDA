@@ -1,0 +1,83 @@
+name: Build Desktop Emulator
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev cmake curl g++
+
+    - name: Download fonts
+      run: |
+        cd desktop_emulator/fonts
+        ./download_fonts.sh
+
+    - name: Build
+      run: |
+        cd desktop_emulator
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        brew install sdl2 sdl2_ttf cmake
+
+    - name: Download fonts
+      run: |
+        cd desktop_emulator/fonts
+        ./download_fonts.sh
+
+    - name: Build
+      run: |
+        cd desktop_emulator
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j$(sysctl -n hw.ncpu)
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install vcpkg
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+        C:\vcpkg\bootstrap-vcpkg.bat
+
+    - name: Install SDL2 via vcpkg
+      run: |
+        C:\vcpkg\vcpkg install sdl2 sdl2-ttf:x64-windows
+
+    - name: Download fonts
+      run: |
+        cd desktop_emulator\fonts
+        bash download_fonts.sh
+
+    - name: Build with CMake
+      run: |
+        cd desktop_emulator
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+        cmake --build . --config Release
